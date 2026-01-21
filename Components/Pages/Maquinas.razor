@@ -1,0 +1,99 @@
+@page "/maquinas"
+@using IndustrialMonitor.Data
+@using IndustrialMonitor.Models
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext DbContext
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Monitoramento de Máquinas</PageTitle>
+
+<h1>Monitoramento de Máquinas</h1>
+
+<p>Acompanhe o status das máquinas em tempo real.</p>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="AdicionarMaquinaTeste">Adicionar Máquina de Teste</button>
+</div>
+
+@if (maquinas == null)
+{
+    <p><em>Carregando...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Nome</th>
+                <th>Status</th>
+                <th>Temperatura (°C)</th>
+                <th>Última Comunicação</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var maquina in maquinas)
+            {
+                <tr>
+                    <td>@maquina.Id</td>
+                    <td>@maquina.Nome</td>
+                    <td>
+                        <span class="badge @GetStatusClass(maquina.Status)">
+                            @maquina.Status
+                        </span>
+                    </td>
+                    <td>@maquina.Temperatura</td>
+                    <td>@maquina.UltimaComunicacao</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Maquina>? maquinas;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarMaquinas();
+    }
+
+    private async Task CarregarMaquinas()
+    {
+        // Try/Catch to handle case where DB doesn't exist yet gracefully in UI
+        try
+        {
+            maquinas = await DbContext.Maquinas.OrderBy(m => m.Id).ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao carregar máquinas: {ex.Message}");
+            maquinas = new List<Maquina>(); // Empty list to avoid null reference in UI
+        }
+    }
+
+    private async Task AdicionarMaquinaTeste()
+    {
+        var novaMaquina = new Maquina
+        {
+            Nome = $"Máquina {DateTime.Now.Ticks % 100}",
+            Status = StatusMaquina.Operando,
+            Temperatura = Random.Shared.Next(20, 80),
+            UltimaComunicacao = DateTime.UtcNow
+        };
+
+        DbContext.Maquinas.Add(novaMaquina);
+        await DbContext.SaveChangesAsync();
+        await CarregarMaquinas();
+    }
+
+    private string GetStatusClass(StatusMaquina status) => status switch
+    {
+        StatusMaquina.Operando => "bg-success",
+        StatusMaquina.Parada => "bg-warning text-dark",
+        StatusMaquina.Manutencao => "bg-info text-dark",
+        StatusMaquina.Erro => "bg-danger",
+        _ => "bg-secondary"
+    };
+}
