@@ -105,6 +105,7 @@
 /home/wtalvaro/Downloads/Containers/arch-home/.gemini/antigravity/scratch/IndustrialMonitor/obj/Debug/net10.0/IndustrialMonitor.AssemblyInfo.cs
 /home/wtalvaro/Downloads/Containers/arch-home/.gemini/antigravity/scratch/IndustrialMonitor/obj/Debug/net10.0/IndustrialMonitor.csproj.CoreCompileInputs.cache
 /home/wtalvaro/Downloads/Containers/arch-home/.gemini/antigravity/scratch/IndustrialMonitor/obj/Debug/net10.0/IndustrialMonitor.MvcApplicationPartsAssemblyInfo.cache
+/home/wtalvaro/Downloads/Containers/arch-home/.gemini/antigravity/scratch/IndustrialMonitor/obj/Debug/net10.0/IndustrialMonitor.sourcelink.json
 /home/wtalvaro/Downloads/Containers/arch-home/.gemini/antigravity/scratch/IndustrialMonitor/obj/Debug/net10.0/rjimswa.dswa.cache.json
 /home/wtalvaro/Downloads/Containers/arch-home/.gemini/antigravity/scratch/IndustrialMonitor/obj/Debug/net10.0/rjsmrazor.dswa.cache.json
 /home/wtalvaro/Downloads/Containers/arch-home/.gemini/antigravity/scratch/IndustrialMonitor/obj/Debug/net10.0/rjsmcshtml.dswa.cache.json
