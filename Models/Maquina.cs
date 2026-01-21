@@ -12,6 +12,9 @@ public class Maquina
     public StatusMaquina Status { get; set; }
 
     public double Temperatura { get; set; }
-
+    public double Pressao { get; set; }
+    public TimeSpan TempoFuncionamento { get; set; }
+    public string MomentoProcesso { get; set; } = "Iniciando";
+    public double ConsumoEnergia { get; set; }
     public DateTime UltimaComunicacao { get; set; }
 }

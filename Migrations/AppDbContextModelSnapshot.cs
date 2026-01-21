@@ -30,15 +30,28 @@ namespace IndustrialMonitor.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<double>("ConsumoEnergia")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("MomentoProcesso")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<double>("Pressao")
+                        .HasColumnType("double precision");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.Property<double>("Temperatura")
                         .HasColumnType("double precision");
+
+                    b.Property<TimeSpan>("TempoFuncionamento")
+                        .HasColumnType("interval");
 
                     b.Property<DateTime>("UltimaComunicacao")
                         .HasColumnType("timestamp with time zone");

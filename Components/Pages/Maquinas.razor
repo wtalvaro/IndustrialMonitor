@@ -1,16 +1,19 @@
 @page "/maquinas"
+@namespace IndustrialMonitor.Components.Pages
 @using IndustrialMonitor.Data
 @using IndustrialMonitor.Models
 @using Microsoft.EntityFrameworkCore
 @inject AppDbContext DbContext
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
+@implements IDisposable
+@using System.Threading
 
 <PageTitle>Monitoramento de Máquinas</PageTitle>
 
-<h1>Monitoramento de Máquinas</h1>
+<h1>Monitoramento de Máquinas (Tempo Real)</h1>
 
-<p>Acompanhe o status das máquinas em tempo real.</p>
+<p>Acompanhe o status e o processo das injetoras plásticas.</p>
 
 <div class="mb-3">
     <button class="btn btn-primary" @onclick="AdicionarMaquinaTeste">Adicionar Máquina de Teste</button>
@@ -22,46 +25,87 @@
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Id</th>
-                <th>Nome</th>
-                <th>Status</th>
-                <th>Temperatura (°C)</th>
-                <th>Última Comunicação</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var maquina in maquinas)
-            {
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-dark">
                 <tr>
-                    <td>@maquina.Id</td>
-                    <td>@maquina.Nome</td>
-                    <td>
-                        <span class="badge @GetStatusClass(maquina.Status)">
-                            @maquina.Status
-                        </span>
-                    </td>
-                    <td>@maquina.Temperatura</td>
-                    <td>@maquina.UltimaComunicacao</td>
+                    <th>Id</th>
+                    <th>Nome</th>
+                    <th>Status</th>
+                    <th>Temperatura (°C)</th>
+                    <th>Pressão (bar)</th>
+                    <th>Energia (kWh)</th>
+                    <th>Tempo Ligada</th>
+                    <th>Momento do Processo</th>
+                    <th>Ações</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var maquina in maquinas)
+                {
+                    <tr>
+                        <td>@maquina.Id</td>
+                        <td><strong>@maquina.Nome</strong></td>
+                        <td>
+                            <span class="badge @GetStatusClass(maquina.Status)">
+                                @GetStatusLabel(maquina.Status)
+                            </span>
+                        </td>
+                        <td>@maquina.Temperatura.ToString("F1")</td>
+                        <td>@maquina.Pressao.ToString("F2")</td>
+                        <td>@maquina.ConsumoEnergia.ToString("F2")</td>
+                        <td>@maquina.TempoFuncionamento.ToString(@"hh\:mm\:ss")</td>
+                        <td>
+                            <span class="text-muted">@maquina.MomentoProcesso</span>
+                        </td>
+                        <td>
+                            @if (maquina.Status == StatusMaquina.Operando)
+                            {
+                                <button class="btn btn-sm btn-danger" @onclick="() => SolicitarDesligamento(maquina.Id)">
+                                    Desligar
+                                </button>
+                            }
+                            else if (maquina.Status == StatusMaquina.DesligamentoSolicitado || maquina.Status == StatusMaquina.EmParadaTecnica)
+                            {
+                                <button class="btn btn-sm btn-outline-secondary" disabled>
+                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    Parando...
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {
     private List<Maquina>? maquinas;
+    private PeriodicTimer? timer;
+    private CancellationTokenSource? cts;
 
     protected override async Task OnInitializedAsync()
     {
         await CarregarMaquinas();
+        
+        // Simular atualização em tempo real
+        cts = new CancellationTokenSource();
+        _ = IniciarMonitoramento(cts.Token);
+    }
+
+    private async Task IniciarMonitoramento(CancellationToken ct)
+    {
+        timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+        while (await timer.WaitForNextTickAsync(ct))
+        {
+            await CarregarMaquinas();
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task CarregarMaquinas()
     {
-        // Try/Catch to handle case where DB doesn't exist yet gracefully in UI
         try
         {
             maquinas = await DbContext.Maquinas.OrderBy(m => m.Id).ToListAsync();
@@ -69,7 +113,7 @@ else
         catch (Exception ex)
         {
             Console.WriteLine($"Erro ao carregar máquinas: {ex.Message}");
-            maquinas = new List<Maquina>(); // Empty list to avoid null reference in UI
+            maquinas = new List<Maquina>();
         }
     }
 
@@ -77,9 +121,13 @@ else
     {
         var novaMaquina = new Maquina
         {
-            Nome = $"Máquina {DateTime.Now.Ticks % 100}",
+            Nome = $"Injetora {DateTime.Now.Ticks % 100}",
             Status = StatusMaquina.Operando,
-            Temperatura = Random.Shared.Next(20, 80),
+            Temperatura = Random.Shared.Next(40, 60),
+            Pressao = Random.Shared.NextDouble() * 5 + 100,
+            ConsumoEnergia = 0,
+            TempoFuncionamento = TimeSpan.Zero,
+            MomentoProcesso = "Ciclo Inicial",
             UltimaComunicacao = DateTime.UtcNow
         };
 
@@ -88,12 +136,40 @@ else
         await CarregarMaquinas();
     }
 
+    private async Task SolicitarDesligamento(int id)
+    {
+        var maquina = await DbContext.Maquinas.FindAsync(id);
+        if (maquina != null && maquina.Status == StatusMaquina.Operando)
+        {
+            maquina.Status = StatusMaquina.DesligamentoSolicitado;
+            maquina.MomentoProcesso = "Desligamento Remoto%";
+            await DbContext.SaveChangesAsync();
+            await CarregarMaquinas();
+        }
+    }
+
     private string GetStatusClass(StatusMaquina status) => status switch
     {
         StatusMaquina.Operando => "bg-success",
-        StatusMaquina.Parada => "bg-warning text-dark",
-        StatusMaquina.Manutencao => "bg-info text-dark",
+        StatusMaquina.Parada => "bg-secondary",
+        StatusMaquina.Manutencao => "bg-warning text-dark",
         StatusMaquina.Erro => "bg-danger",
-        _ => "bg-secondary"
+        StatusMaquina.DesligamentoSolicitado => "bg-dark",
+        StatusMaquina.EmParadaTecnica => "bg-info text-dark",
+        _ => "bg-light text-dark"
     };
+
+    private string GetStatusLabel(StatusMaquina status) => status switch
+    {
+        StatusMaquina.DesligamentoSolicitado => "Deslig. Solicitado",
+        StatusMaquina.EmParadaTecnica => "Rotina de Parada",
+        _ => status.ToString()
+    };
+
+    public void Dispose()
+    {
+        cts?.Cancel();
+        cts?.Dispose();
+        timer?.Dispose();
+    }
 }

@@ -5,5 +5,7 @@ public enum StatusMaquina
     Operando,
     Parada,
     Manutencao,
-    Erro
+    Erro,
+    DesligamentoSolicitado,
+    EmParadaTecnica
 }
