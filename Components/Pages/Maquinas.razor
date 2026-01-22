@@ -1,4 +1,5 @@
 @page "/maquinas"
+@page "/"
 @namespace IndustrialMonitor.Components.Pages
 @using IndustrialMonitor.Data
 @using IndustrialMonitor.Models
@@ -37,6 +38,7 @@ else
                     <th>Energia (kWh)</th>
                     <th>Tempo Ligada</th>
                     <th>Momento do Processo</th>
+                    <th>Motivo / Timer</th>
                     <th>Ações</th>
                 </tr>
             </thead>
@@ -59,19 +61,45 @@ else
                             <span class="text-muted">@maquina.MomentoProcesso</span>
                         </td>
                         <td>
-                            @if (maquina.Status == StatusMaquina.Operando)
+                            @if (contagensRegressivas.ContainsKey(maquina.Id))
                             {
-                                <button class="btn btn-sm btn-danger" @onclick="() => SolicitarDesligamento(maquina.Id)">
-                                    Desligar
-                                </button>
+                                <span class="badge bg-warning text-dark">
+                                    Desligando em @contagensRegressivas[maquina.Id]s
+                                </span>
                             }
-                            else if (maquina.Status == StatusMaquina.DesligamentoSolicitado || maquina.Status == StatusMaquina.EmParadaTecnica)
+                            else if (!string.IsNullOrEmpty(maquina.MotivoDesligamento) && maquina.Status != StatusMaquina.Operando)
                             {
-                                <button class="btn btn-sm btn-outline-secondary" disabled>
-                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                    Parando...
-                                </button>
+                                <small class="text-danger">@maquina.MotivoDesligamento</small>
                             }
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                @if (maquina.Status == StatusMaquina.Operando)
+                                {
+                                    @if (!contagensRegressivas.ContainsKey(maquina.Id))
+                                    {
+                                        <div class="input-group input-group-sm" style="width: 120px;">
+                                            <input type="number" class="form-control" placeholder="Seg" 
+                                                   @bind="temposInput[maquina.Id]" />
+                                            <button class="btn btn-outline-secondary" type="button" 
+                                                    @onclick="() => IniciarTimer(maquina.Id)">
+                                                Agendar
+                                            </button>
+                                        </div>
+                                    }
+                                    
+                                    <button class="btn btn-sm btn-danger" @onclick='() => SolicitarDesligamento(maquina.Id, "Desligamento Manual")'>
+                                        Desligar
+                                    </button>
+                                }
+                                else if (maquina.Status == StatusMaquina.DesligamentoSolicitado || maquina.Status == StatusMaquina.EmParadaTecnica)
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary" disabled>
+                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                        Parando...
+                                    </button>
+                                }
+                            </div>
                         </td>
                     </tr>
                 }
@@ -84,6 +112,8 @@ else
     private List<Maquina>? maquinas;
     private PeriodicTimer? timer;
     private CancellationTokenSource? cts;
+    private Dictionary<int, int> contagensRegressivas = new();
+    private Dictionary<int, int> temposInput = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -96,11 +126,38 @@ else
 
     private async Task IniciarMonitoramento(CancellationToken ct)
     {
-        timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+        timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
         while (await timer.WaitForNextTickAsync(ct))
         {
+            await ProcessarTimers();
             await CarregarMaquinas();
             await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ProcessarTimers()
+    {
+        var idsParaRemover = new List<int>();
+        
+        foreach (var par in contagensRegressivas.ToList())
+        {
+            int id = par.Key;
+            int tempoRestante = par.Value - 1;
+
+            if (tempoRestante <= 0)
+            {
+                idsParaRemover.Add(id);
+                await SolicitarDesligamento(id, "Tempo limite atingido");
+            }
+            else
+            {
+                contagensRegressivas[id] = tempoRestante;
+            }
+        }
+
+        foreach (var id in idsParaRemover)
+        {
+            contagensRegressivas.Remove(id);
         }
     }
 
@@ -109,6 +166,16 @@ else
         try
         {
             maquinas = await DbContext.Maquinas.OrderBy(m => m.Id).ToListAsync();
+            
+            // Inicializar inputs para novas máquinas
+            if (maquinas != null)
+            {
+                foreach (var m in maquinas)
+                {
+                    if (!temposInput.ContainsKey(m.Id))
+                        temposInput[m.Id] = 30; // 30 segundos padrão
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -136,15 +203,24 @@ else
         await CarregarMaquinas();
     }
 
-    private async Task SolicitarDesligamento(int id)
+    private async Task SolicitarDesligamento(int id, string motivo)
     {
         var maquina = await DbContext.Maquinas.FindAsync(id);
         if (maquina != null && maquina.Status == StatusMaquina.Operando)
         {
             maquina.Status = StatusMaquina.DesligamentoSolicitado;
             maquina.MomentoProcesso = "Desligamento Remoto%";
+            maquina.MotivoDesligamento = motivo;
             await DbContext.SaveChangesAsync();
             await CarregarMaquinas();
+        }
+    }
+
+    private void IniciarTimer(int id)
+    {
+        if (temposInput.TryGetValue(id, out int segundos) && segundos > 0)
+        {
+            contagensRegressivas[id] = segundos;
         }
     }
 

@@ -1,5 +1,6 @@
 using IndustrialMonitor.Components;
 using IndustrialMonitor.Data;
+using IndustrialMonitor.Hubs;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,8 +9,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddSignalR();
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddHostedService<IndustrialMonitor.Services.IndustrialSimulator>();
 
 var app = builder.Build();
 
@@ -24,5 +29,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapHub<IndustrialHub>("/industrialHub");
 
 app.Run();

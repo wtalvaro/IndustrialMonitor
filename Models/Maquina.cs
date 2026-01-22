@@ -16,5 +16,6 @@ public class Maquina
     public TimeSpan TempoFuncionamento { get; set; }
     public string MomentoProcesso { get; set; } = "Iniciando";
     public double ConsumoEnergia { get; set; }
+    public string? MotivoDesligamento { get; set; }
     public DateTime UltimaComunicacao { get; set; }
 }

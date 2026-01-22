@@ -1,0 +1,142 @@
+@page "/monitor"
+@namespace IndustrialMonitor.Components.Pages
+@using IndustrialMonitor.Data
+@using IndustrialMonitor.Models
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext DbContext
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+
+<PageTitle>Monitoramento Industrial</PageTitle>
+
+<h1>Monitoramento Industrial (Tempo Real)</h1>
+
+<p>Interface unificada para acompanhamento das injetoras via SignalR.</p>
+
+@if (maquinas == null)
+{
+    <div class="d-flex justify-content-center my-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Carregando...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Id</th>
+                    <th>Nome</th>
+                    <th>Status</th>
+                    <th>Temperatura (°C)</th>
+                    <th>Pressão (bar)</th>
+                    <th>Energia (kWh)</th>
+                    <th>Tempo Ligada</th>
+                    <th>Momento do Processo</th>
+                    <th class="text-center">Conexão Hub</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var maquina in maquinas)
+                {
+                    <tr>
+                        <td>@maquina.Id</td>
+                        <td><strong>@maquina.Nome</strong></td>
+                        <td>
+                            <span class="badge @GetStatusClass(maquina.Status)">
+                                @GetStatusLabel(maquina.Status)
+                            </span>
+                        </td>
+                        <td>@maquina.Temperatura.ToString("F1")</td>
+                        <td>@maquina.Pressao.ToString("F2")</td>
+                        <td>@maquina.ConsumoEnergia.ToString("F3")</td>
+                        <td>@maquina.TempoFuncionamento.ToString(@"hh\:mm\:ss")</td>
+                        <td>
+                            <span class="text-muted">@maquina.MomentoProcesso</span>
+                        </td>
+                        <td class="text-center">
+                            @if (isConnected)
+                            {
+                                <span class="badge bg-success" title="Conectado via SignalR">
+                                    <i class="bi bi-broadcast"></i> Online
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-broadcast-pin"></i> Offline
+                                </span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<Maquina>? maquinas;
+    private HubConnection? hubConnection;
+    private bool isConnected => hubConnection?.State == HubConnectionState.Connected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarMaquinas();
+
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/industrialHub"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        hubConnection.On("ReceiveUpdate", async () =>
+        {
+            await CarregarMaquinas();
+            await InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async Task CarregarMaquinas()
+    {
+        try
+        {
+            maquinas = await DbContext.Maquinas.AsNoTracking().OrderBy(m => m.Id).ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao carregar máquinas no Monitor: {ex.Message}");
+        }
+    }
+
+    private string GetStatusClass(StatusMaquina status) => status switch
+    {
+        StatusMaquina.Operando => "bg-success",
+        StatusMaquina.Parada => "bg-secondary",
+        StatusMaquina.Manutencao => "bg-warning text-dark",
+        StatusMaquina.Erro => "bg-danger",
+        StatusMaquina.DesligamentoSolicitado => "bg-dark",
+        StatusMaquina.EmParadaTecnica => "bg-info text-dark",
+        _ => "bg-light text-dark"
+    };
+
+    private string GetStatusLabel(StatusMaquina status) => status switch
+    {
+        StatusMaquina.DesligamentoSolicitado => "Deslig. Solicitado",
+        StatusMaquina.EmParadaTecnica => "Rotina de Parada",
+        _ => status.ToString()
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}
