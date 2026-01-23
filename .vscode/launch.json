@@ -1,0 +1,46 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": ".NET Core Launch (web)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/bin/Debug/net10.0/IndustrialMonitor.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://0.0.0.0:5081"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views",
+                "/Components": "${workspaceFolder}/Components",
+                "/home/wtalvaro/Downloads/Containers/arch-home/.gemini/antigravity/scratch/IndustrialMonitor": "${workspaceFolder}"
+            },
+            "logging": {
+                "moduleLoad": false
+            },
+            "justMyCode": false,
+            "requireExactSource": false,
+            "symbolOptions": {
+                "searchPaths": [
+                    "${workspaceFolder}/bin/Debug/net10.0"
+                ],
+                "searchMicrosoftSymbolServer": false,
+                "searchNuGetOrgSymbolServer": false
+            }
+        },
+        {
+            "name": ".NET Core Attach",
+            "type": "coreclr",
+            "request": "attach",
+            "processId": "${command:pickProcess}"
+        }
+    ]
+}
