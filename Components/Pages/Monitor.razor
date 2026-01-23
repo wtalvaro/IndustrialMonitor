@@ -4,6 +4,7 @@
 @using IndustrialMonitor.Models
 @using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.EntityFrameworkCore
+@using System.Net
 @inject AppDbContext DbContext
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
@@ -87,11 +88,20 @@ else
     protected override async Task OnInitializedAsync()
     {
         await CarregarMaquinas();
+        var hubUri = Navigation.ToAbsoluteUri("/industrialHub");
+
+        // SOLUÇÃO: Verificação direta de string é mais segura que IPAddress.TryParse neste caso
+        if (hubUri.Host == "0.0.0.0" || hubUri.Host == "::0" || hubUri.Host == "[::]")
+        {
+            var uriBuilder = new UriBuilder(hubUri);
+            uriBuilder.Host = "127.0.0.1"; // Força loopback local
+            hubUri = uriBuilder.Uri;
+        }
 
         hubConnection = new HubConnectionBuilder()
-            .WithUrl(Navigation.ToAbsoluteUri("/industrialHub"))
-            .WithAutomaticReconnect()
-            .Build();
+        .WithUrl(hubUri)
+        .WithAutomaticReconnect()
+        .Build();
 
         hubConnection.On("ReceiveUpdate", async () =>
         {

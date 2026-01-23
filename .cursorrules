@@ -1,0 +1,18 @@
+# Gemini Agent Rules - Project Context
+
+## Contexto de Ambiente
+- Sistema Operacional: AlmaLinux (Host) / Arch Linux (Distrobox).
+- Priorize comandos de terminal compatíveis com `pacman` (dentro do container) ou `dnf` (no host).
+- Ao executar `dotnet` ou `mvn`, sempre verifique o diretório do arquivo de projeto (.csproj ou pom.xml).
+
+## Restrições de Token e Performance
+- **Respostas Curtas:** Proibido explicações teóricas longas a menos que solicitado.
+- **Leitura Seletiva:** Se eu pedir para corrigir um erro, leia apenas o arquivo relevante e os arquivos de interface relacionados.
+- **Zero Alucinação:** Se não encontrar uma referência no projeto, peça para eu indicar o caminho em vez de assumir que a biblioteca existe.
+
+## Padrões de Código
+- Backend: Seguir padrões de Injeção de Dependência nativos do ASP.NET Core ou Spring Boot.
+- Logs: Em caso de falha no build, use `grep` para filtrar apenas os erros (Error/Critical).
+
+## Instrução de Agente
+- Não resuma o que você vai fazer. Apenas gere o "Plan" (Artefato) e execute após minha aprovação.
