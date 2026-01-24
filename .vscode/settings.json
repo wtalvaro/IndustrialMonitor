@@ -1,2 +1,74 @@
 {
+    "workbench.colorTheme": "Default Light Modern",
+    "editor.minimap.enabled": false,
+    "editor.stickyScroll.enabled": false,
+    "terminal.integrated.env.linux": {
+        "PATH": "/usr/share/dotnet:${env:PATH}",
+        "DOTNET_ROOT": "/usr/share/dotnet",
+        // Garante que o terminal integrado também enxergue o socket
+        "DOCKER_HOST": "unix:///home/wtalvaro/Downloads/Containers/podman.sock"
+    },
+    "redhat.telemetry.enabled": false,
+    "workbench.startupEditor": "none",
+    "omnisharp.dotnetPath": "/usr/bin/dotnet",
+    "git.enableSmartCommit": true,
+    "git.autofetch": true,
+    "pgsql.serverGroups": [
+        {
+            "name": "Servers",
+            "id": "B9337269-7453-4AF6-8BE6-5F3C850A8851",
+            "isDefault": true
+        }
+    ],
+    "pgsql.connections": [
+        {
+            "id": "F5F34EAC-D5EC-4125-BE94-E3B7D5F6EB2F",
+            "groupId": "B9337269-7453-4AF6-8BE6-5F3C850A8851",
+            "authenticationType": "SqlLogin",
+            "connectTimeout": 15,
+            "applicationName": "vscode-pgsql",
+            "clientEncoding": "utf8",
+            "sslmode": "prefer",
+            "savePassword": true,
+            "server": "127.0.0.1",
+            "user": "postgres",
+            "password": "",
+            "database": "db_estoque",
+            "sshPassword": "",
+            "profileName": "postgresql",
+            "port": "5432",
+            "hostaddr": "",
+            "displayName": "db_estoque",
+            "expiresOn": 0
+        }
+    ],
+    "diffEditor.codeLens": true,
+    "git.confirmSync": false,
+    /* --- CONFIGURAÇÃO ATIVA (PODMAN VIA SOCAT) --- */
+    // Caminho onde a extensão da Microsoft busca o socket do Podman por padrão
+    "docker.host": "unix:///run/user/1000/podman/podman.sock",
+    // Variável de ambiente para o CLI (docker/podman) e extensões
+    "docker.environment": {
+        "DOCKER_HOST": "unix:///run/user/1000/podman/podman.sock"
+    },
+    // Força o uso do binário do Podman
+    "docker.dockerPath": "/usr/bin/podman",
+    // Ajuste de comandos para compatibilidade com Podman
+    "docker.commands.inspect": "podman inspect ${containerId}",
+    "docker.commands.build": "podman build --pull -t ${tag} -f ${dockerfile} ${context}",
+    /* --- CÓDIGO PADRÃO (PARA REFERÊNCIA / OUTROS AMBIENTES) --- 
+    
+    // Docker Padrão no Linux (Root):
+    // "docker.host": "unix:///var/run/docker.sock",
+    // "docker.dockerPath": "/usr/bin/docker",
+
+    // Podman Padrão Rootless (Sem Socat/Túnel):
+    // "docker.host": "unix:///run/user/1000/podman/podman.sock",
+    
+    // Docker no Windows (WSL2):
+    // "docker.host": "npipe:////./pipe/docker_engine",
+
+    ---------------------------------------------------------- */
+    "docker.containers.showAll": true,
+    "dev.containers.dockerPath": "podman"
 }
